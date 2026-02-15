@@ -1,0 +1,84 @@
+pipeline {
+    agent any
+
+    environment {
+        // 젠킨스 Credentials에 등록한 ID와 일치해야 함
+        SLACK_CREDENTIAL_ID = 'slack-bot-token'
+        // 슬랙 채널 ID (C로 시작하는 값)
+        CHANNEL_ID = 'Your-channel-id' 
+    }
+
+    stages {
+        stage('Ask for Approval') {
+            steps {
+                script {
+                    // 1. 슬랙에 보낼 JSON Payload 구성 (env 객체 활용)
+                    // 이 블록은 젠킨스 보안 승인 요구를 최소화합니다.
+                    def payloadJson = """
+                    {
+                        "channel": "${env.CHANNEL_ID}",
+                        "blocks": [
+                            {
+                                "type": "section",
+                                "text": {
+                                    "type": "mrkdwn",
+                                    "text": "* 배포 승인 요청*\\n*Job:* ${env.JOB_NAME}\\n*Build:* #${env.BUILD_NUMBER}\\n\\n외부에서 승인 버튼을 누르면 배포가 재개됩니다."
+                                }
+                            },
+                            {
+                                "type": "actions",
+                                "elements": [
+                                    {
+                                        "type": "button",
+                                        "text": { "type": "plain_text", "text": "승인 (Approve)" },
+                                        "style": "primary",
+                                        "value": "${env.JOB_NAME}/${env.BUILD_NUMBER}",
+                                        "action_id": "approve_build"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                    """
+
+                    // 2. 환경변수에 페이로드 저장 (sh에서 접근 가능하도록)
+                    env.SLACK_PAYLOAD = payloadJson
+
+                    // 3. 슬랙 메시지 전송 (withCredentials 사용)
+                    withCredentials([string(credentialsId: env.SLACK_CREDENTIAL_ID, variable: 'BOT_TOKEN')]) {
+                        // 작은 따옴표(')를 사용하여 Groovy Interpolation 대신 Shell Variable 사용
+                        sh '''
+                            curl -X POST \
+                            -H "Authorization: Bearer $BOT_TOKEN" \
+                            -H "Content-type: application/json; charset=utf-8" \
+                            --data "$SLACK_PAYLOAD" \
+                            https://slack.com/api/chat.postMessage
+                        '''
+                    }
+
+                    // 4. 젠킨스 빌드 일시 중단 및 대기
+                    // id는 Python 봇의 API 호출 경로와 일치해야 함 (case-sensitive)
+                    input id: 'AskApproval', message: '슬랙에서 승인을 기다리는 중입니다...'
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo "--------------------------------------------------"
+                echo "✅ 승인이 완료되었습니다. 배포 단계를 실행합니다."
+                echo "--------------------------------------------------"
+                // 여기에 실제 배포 스크립트 작성 (예: ansible, kubectl 등)
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo "❌ 빌드 또는 승인 과정에서 오류가 발생했습니다."
+        }
+        aborted {
+            echo "🛑 사용자에 의해 빌드가 중단되었습니다."
+        }
+    }
+}
