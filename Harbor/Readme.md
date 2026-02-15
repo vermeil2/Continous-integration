@@ -42,9 +42,3 @@
 
    > `harbor.yml` 을 도메인/인증서 경로/포트 등에 맞게 꼭 수정한 뒤 설치하세요.
 
-3. Harbor 시작/중지/상태 확인:
-
-   ```bash
-   chmod +x harbor-start.sh
-   ./harbor-start.sh start
-   ```
