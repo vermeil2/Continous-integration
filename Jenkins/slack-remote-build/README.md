@@ -81,7 +81,7 @@ Jenkins 관련 : Jenkins configuration 토큰
 
 ```bash
 ( 파이썬 가상환경 activate 상태에서 )
-vi .env
+cp env.tmp .env
 ```
 
 ## .env
