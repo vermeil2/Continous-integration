@@ -87,11 +87,11 @@ cp env.tmp .env
 ## .env
 
 ```bash
-# Slack Tokens ( 아까 메모해놓은 토큰들 넣으세요 )
+# Slack Tokens ( 아까 메모해놓은 토큰들 넣으세요요 )
 SLACK_BOT_TOKEN=
 SLACK_APP_TOKEN=
 
-# Jenkins Configuration ( 서버 환경에 맞춰 변경하세요 )
+# Jenkins Configuration ( 서버 환경에 맞춰 변경 )
 JENKINS_URL=http://localhost:8080
 JENKINS_USER=admin
 JENKINS_TOKEN=
