@@ -1,0 +1,38 @@
+pipeline {
+    agent any
+
+    environment {
+        // 테스트용 이미지
+        TEST_IMAGE = "python:3.4-alpine"
+        // Credentials ID 확인 필수
+        GEMINI_API_KEY = credentials('GEMINI_API_KEY')
+        SLACK_WEBHOOK_URL = credentials('SLACK_WEBHOOK')
+        // 스크립트 저장 경로 정의
+        SCRIPT_PATH = "/var/lib/jenkins/scripts/analyze_vulnerability.py"
+    }
+
+    stages {
+        stage('Trivy Scan') {
+            steps {
+                echo "🔍 Scanning ${TEST_IMAGE}..."
+                // 결과를 현재 워크스페이스에 저장
+                sh "trivy image -f json -o test-result.json ${TEST_IMAGE}"
+            }
+        }
+
+        stage('AI Analysis & Alert') {
+            steps {
+                echo "🧠 Starting AI Analysis..."
+                // 파이썬 실행 (JSON 파일은 워크스페이스에 있으므로 파일명만 인자로 전달되는 구조)
+                sh "python3 ${SCRIPT_PATH}"
+            }
+        }
+    }
+
+    post {
+        always {
+            // 워크스페이스에 생성된 임시 JSON 파일 삭제
+            sh 'rm -f test-result.json'
+        }
+    }
+}
