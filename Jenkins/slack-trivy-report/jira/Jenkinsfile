@@ -1,0 +1,38 @@
+pipeline {
+    agent any
+
+    environment {
+        // 테스트할 이미지 변경 가능
+        TEST_IMAGE = "node:18-alpine" 
+        SCRIPT_PATH = "/var/lib/jenkins/scripts/analyze_vulnerability.py"
+    }
+
+    stages {
+        stage('Trivy Scan') {
+            steps {
+                echo "🔍 Scanning ${TEST_IMAGE}..."
+                sh "trivy image -f json -o test-result.json ${TEST_IMAGE}"
+            }
+        }
+
+        stage('AI Analysis & Management') {
+            steps {
+                echo "🧠 Analyzing with Gemini & Creating Jira Ticket..."
+                // 3개의 Credential을 동시에 주입합니다.
+                withCredentials([
+                    string(credentialsId: 'GEMINI_API_KEY', variable: 'GEMINI_API_KEY'),
+                    string(credentialsId: 'SLACK_WEBHOOK', variable: 'SLACK_WEBHOOK_URL'),
+                    string(credentialsId: 'JIRA_TOKEN', variable: 'JIRA_API_TOKEN')
+                ]) {
+                    sh "python3 ${SCRIPT_PATH}"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'rm -f test-result.json'
+        }
+    }
+}
